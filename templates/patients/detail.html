@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% block title %}{{ patient.full_name }} — ClinicalAI{% endblock %}
+
+{% block content %}
+<a href="/" class="back-link">← Back to Dashboard</a>
+<div class="page-header">
+  <div>
+    <h1>{{ patient.full_name }}</h1>
+    <p>Age {{ patient.age }} · {{ patient.get_gender_display }} · Blood group {{ patient.blood_group }} · Admitted {{ patient.admitted_on|date:"d M Y" }}</p>
+  </div>
+</div>
+
+<div class="two-col">
+  <div style="display:flex;flex-direction:column;gap:16px;">
+    {% if vitals %}
+    <div class="panel">
+      <div class="panel-header">❤️ Vital signs</div>
+      <div class="vitals-grid">
+        <div class="vital-card"><div class="vital-label">Blood pressure</div><div class="vital-value">{{ vitals.systolic_bp }}/{{ vitals.diastolic_bp }}</div><div class="vital-unit">mmHg</div></div>
+        <div class="vital-card"><div class="vital-label">Heart rate</div><div class="vital-value">{{ vitals.heart_rate }}</div><div class="vital-unit">bpm</div></div>
+        <div class="vital-card"><div class="vital-label">SpO2</div><div class="vital-value">{{ vitals.spo2 }}</div><div class="vital-unit">%</div></div>
+        <div class="vital-card"><div class="vital-label">Temperature</div><div class="vital-value">{{ vitals.temperature }}</div><div class="vital-unit">°C</div></div>
+        <div class="vital-card"><div class="vital-label">Resp. rate</div><div class="vital-value">{{ vitals.respiratory_rate }}</div><div class="vital-unit">br/min</div></div>
+        <div class="vital-card"><div class="vital-label">BMI</div><div class="vital-value">{{ vitals.bmi }}</div><div class="vital-unit">kg/m²</div></div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="panel">
+      <div class="panel-header">🧾 Patient info</div>
+      <table class="info-table">
+        <tr><td>Allergies</td><td>{{ patient.allergies|default:"None reported" }}</td></tr>
+        <tr><td>Medications</td><td>{{ patient.current_medications|default:"None" }}</td></tr>
+        <tr><td>History</td><td>{{ patient.medical_history|default:"None" }}</td></tr>
+        <tr><td>Contact</td><td>{{ patient.contact_number }}</td></tr>
+        <tr><td>Email</td><td>{{ patient.email|default:"—" }}</td></tr>
+      </table>
+    </div>
+
+    {% if labs %}
+    <div class="panel">
+      <div class="panel-header">🧪 Lab results</div>
+      <table class="lab-table">
+        <thead><tr><th>Test</th><th>Value</th><th>Reference</th><th></th></tr></thead>
+        <tbody>
+          {% for lab in labs %}
+          <tr class="{% if lab.is_abnormal %}row-abnormal{% endif %}">
+            <td>{{ lab.test_name }}</td>
+            <td><strong>{{ lab.value }}</strong> {{ lab.unit }}</td>
+            <td class="muted">{{ lab.normal_range }}</td>
+            <td>{% if lab.is_abnormal %}<span class="flag-abnormal">!</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  <div>
+    <div class="panel ai-panel">
+      <div class="panel-header">🤖 AI analysis</div>
+      <button id="analyze-btn" class="btn-analyze" onclick="runAnalysis({{ patient.id }})">▶ Run AI Analysis</button>
+      <div id="loading" class="loading hidden">
+        <div class="spinner"></div>
+        <div id="loading-text" style="font-weight:600;color:var(--blue);">Initialising agents...</div>
+        <div style="font-size:12px;color:var(--gray-400);">This takes 20–30 seconds</div>
+      </div>
+      <div id="report" class="hidden">
+        <div class="tabs">
+          <button class="tab active" onclick="showTab('diagnosis',this)">🔍 Diagnosis</button>
+          <button class="tab" onclick="showTab('risk',this)">⚠️ Risk</button>
+          <button class="tab" onclick="showTab('treatment',this)">💊 Treatment</button>
+          <button class="tab" onclick="showTab('pathway',this)">📋 Pathway</button>
+        </div>
+        <div id="tab-diagnosis" class="tab-content"></div>
+        <div id="tab-risk"      class="tab-content hidden"></div>
+        <div id="tab-treatment" class="tab-content hidden"></div>
+        <div id="tab-pathway"   class="tab-content hidden"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const STEPS=['Running diagnostic agent...','Assessing patient risk...','Building treatment plan...','Generating care pathway...'];
+function runAnalysis(pid){
+  document.getElementById('analyze-btn').classList.add('hidden');
+  document.getElementById('loading').classList.remove('hidden');
+  var step=0,txt=document.getElementById('loading-text');
+  var iv=setInterval(function(){step=(step+1)%STEPS.length;txt.textContent=STEPS[step];},5000);
+  fetch('/api/patients/'+pid+'/analyze/',{method:'POST'})
+    .then(function(r){return r.json();})
+    .then(function(data){
+      clearInterval(iv);
+      document.getElementById('loading').classList.add('hidden');
+      if(data.success){renderReport(data.report);document.getElementById('report').classList.remove('hidden');}
+      else{alert('Error: '+data.error);document.getElementById('analyze-btn').classList.remove('hidden');}
+    }).catch(function(e){clearInterval(iv);document.getElementById('loading').classList.add('hidden');document.getElementById('analyze-btn').classList.remove('hidden');alert('Failed: '+e);});
+}
+function renderReport(r){
+  var dx=r.diagnosis;
+  document.getElementById('tab-diagnosis').innerHTML='<div class="report-section">'+
+    '<div class="report-primary">'+dx.primary_diagnosis+'</div>'+
+    '<div class="report-meta"><span>Confidence: <strong>'+Math.round((dx.confidence_score||0)*100)+'%</strong></span><span>ICD: <strong>'+(dx.icd_code||'—')+'</strong></span></div>'+
+    '<div class="report-reasoning">'+dx.reasoning+'</div>'+
+    '<div class="report-label">Differential diagnoses</div>'+
+    (dx.differentials||[]).map(function(d){var p=Math.round((d.confidence||0)*100);return '<div class="differential"><div class="diff-top"><span class="diff-name">'+d.name+'</span><span class="diff-conf">'+p+'%</span></div><div class="diff-evidence">'+d.key_findings+'</div><div class="diff-bar"><div class="diff-bar-fill" style="width:'+p+'%"></div></div></div>';}).join('')+
+    (dx.red_flags&&dx.red_flags.length?'<div class="red-flags">🚩 Red flags: '+dx.red_flags.join(' · ')+'</div>':'')+
+    '</div>';
+  var rk=r.risk;
+  document.getElementById('tab-risk').innerHTML='<div class="report-section">'+
+    '<div class="risk-badge risk-'+rk.risk_level+'">'+rk.risk_level.toUpperCase()+' — '+rk.risk_score+'/100</div>'+
+    '<div class="risk-bar-wrap"><div class="risk-bar" style="width:'+rk.risk_score+'%;background:'+riskColor(rk.risk_level)+'"></div></div>'+
+    '<div class="report-label">Alert reasons</div>'+(rk.alert_reasons||[]).map(function(x){return '<div class="list-item">'+x+'</div>';}).join('')+
+    '<div class="report-label">Immediate actions</div>'+(rk.immediate_actions||[]).map(function(x){return '<div class="list-item action">'+x+'</div>';}).join('')+
+    '<div class="report-meta" style="margin-top:10px;">Monitor every: '+rk.monitoring_frequency+'</div></div>';
+  var tx=r.treatment;
+  document.getElementById('tab-treatment').innerHTML='<div class="report-section">'+
+    '<div class="report-label">Medications</div>'+(tx.medications||[]).map(function(m){return '<div class="med-card"><div class="med-top"><span class="med-name">'+m.name+'</span><span class="med-route">'+m.route+'</span></div><div class="med-detail">'+m.dose+' · '+m.frequency+' · '+m.duration+'</div>'+(m.notes?'<div class="med-note">'+m.notes+'</div>':'')+'</div>';}).join('')+
+    '<div class="report-label">Interventions</div>'+(tx.interventions||[]).map(function(x){return '<div class="list-item">'+x+'</div>';}).join('')+
+    '<div class="report-label">Monitoring</div>'+(tx.monitoring_parameters||[]).map(function(x){return '<div class="list-item">'+x+'</div>';}).join('')+
+    (tx.contraindications_noted&&tx.contraindications_noted.length?'<div class="contraindication">⚠️ '+tx.contraindications_noted.join(', ')+'</div>':'')+
+    '<div class="report-meta" style="margin-top:10px;">Evidence: '+(tx.evidence_basis||'')+'</div></div>';
+  var cp=r.care_pathway;
+  document.getElementById('tab-pathway').innerHTML='<div class="report-section">'+
+    '<div class="report-primary" style="font-size:15px;">⏱ Duration: '+cp.estimated_duration+'</div>'+
+    '<div class="report-label">Daily schedule</div>'+(cp.daily_schedule||[]).map(function(d){return '<div class="day-card"><div class="day-num">Day '+d.day+' — '+d.focus+'</div>'+(d.tasks||[]).map(function(t){return '<div class="day-task">'+t+'</div>';}).join('')+'</div>';}).join('')+
+    '<div class="report-label">Discharge criteria</div>'+(cp.discharge_criteria||[]).map(function(x){return '<div class="list-item">'+x+'</div>';}).join('')+
+    '</div>';
+}
+function riskColor(l){return{critical:'#DC2626',high:'#D97706',medium:'#2563EB',low:'#16A34A'}[l]||'#6B7280';}
+function showTab(name,btn){
+  document.querySelectorAll('.tab-content').forEach(function(t){t.classList.add('hidden');});
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  document.getElementById('tab-'+name).classList.remove('hidden');
+  btn.classList.add('active');
+}
+</script>
+{% endblock %}

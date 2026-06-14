@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — ClinicalAI{% endblock %}
+{% block nav_home %}active{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Clinical Dashboard</h1>
+    <p>Agentic AI Clinical Decision Support System</p>
+  </div>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card blue">
+    <div class="stat-label">Total patients</div>
+    <div class="stat-value">{{ counts.total }}</div>
+  </div>
+  <div class="stat-card red">
+    <div class="stat-label">Critical alerts</div>
+    <div class="stat-value">{{ counts.critical }}</div>
+  </div>
+  <div class="stat-card amber">
+    <div class="stat-label">High risk</div>
+    <div class="stat-value">{{ counts.high }}</div>
+  </div>
+  <div class="stat-card gray">
+    <div class="stat-label">Unassessed</div>
+    <div class="stat-value">{{ counts.unassessed }}</div>
+  </div>
+</div>
+
+<div class="two-col">
+  <div class="panel">
+    <div class="panel-header">
+      <span>👥</span> Patients
+      <span class="badge-count" style="margin-left:auto;">{{ counts.total }}</span>
+    </div>
+    <div class="patient-list">
+      {% for p in patients %}
+      <a href="/patients/{{ p.id }}/" class="patient-row">
+        <div class="patient-avatar">{{ p.first_name.0 }}{{ p.last_name.0 }}</div>
+        <div class="patient-info">
+          <div class="patient-name">{{ p.full_name }}</div>
+          <div class="patient-meta">Age {{ p.age }} · {{ p.get_gender_display }} · {{ p.blood_group }}</div>
+        </div>
+        {% with alert=p.risk_alerts.first %}
+          {% if alert %}
+            <span class="badge badge-{{ alert.risk_level }}">{{ alert.risk_level }}</span>
+          {% else %}
+            <span class="badge badge-none">unassessed</span>
+          {% endif %}
+        {% endwith %}
+      </a>
+      {% empty %}
+      <div class="empty-state">
+        No patients yet.<br>
+        <a href="/patients/add/" style="color:var(--blue);font-weight:600;">+ Add your first patient</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span>🚨</span> Active alerts
+      <span class="badge-count" style="margin-left:auto;" id="alert-count">{{ alerts|length }}</span>
+    </div>
+    <div class="alert-list">
+      {% for alert in alerts %}
+      <div class="alert-item alert-{{ alert.risk_level }}" id="alert-{{ alert.id }}">
+        <div class="alert-top">
+          <span class="alert-patient">{{ alert.patient.full_name }}</span>
+          <span class="badge badge-{{ alert.risk_level }}">{{ alert.risk_level }} · {{ alert.risk_score }}/100</span>
+        </div>
+        <div class="alert-reasons">
+          {% for reason in alert.alert_reasons %}
+          <div class="alert-reason">{{ reason }}</div>
+          {% endfor %}
+        </div>
+        <div class="alert-actions-row">
+          {% for action in alert.immediate_actions %}
+          <div class="alert-action">{{ action }}</div>
+          {% endfor %}
+        </div>
+        <button class="btn-ack" onclick="acknowledgeAlert({{ alert.id }})">✓ Acknowledge</button>
+      </div>
+      {% empty %}
+      <div class="empty-state">✅ No active alerts</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function acknowledgeAlert(id) {
+  fetch('/api/alerts/' + id + '/acknowledge/', {method:'POST'})
+    .then(r => r.json())
+    .then(() => {
+      var el = document.getElementById('alert-' + id);
+      el.style.opacity = '0';
+      el.style.transition = 'opacity .3s';
+      setTimeout(function(){ el.remove(); }, 300);
+      var cnt = document.getElementById('alert-count');
+      cnt.textContent = Math.max(0, parseInt(cnt.textContent) - 1);
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}ClinicalAI{% endblock %}</title>
+  {% load static %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="nav-brand">
+      <div class="nav-logo">+</div>
+      ClinicalAI
+    </a>
+    <div class="nav-links">
+      <a href="/" class="nav-link {% block nav_home %}{% endblock %}">
+        🏥 Dashboard
+      </a>
+      <a href="/patients/add/" class="nav-link nav-add {% block nav_add %}{% endblock %}">
+        ＋ <span>Add Patient</span>
+      </a>
+      <a href="/admin/" class="nav-link">⚙ Admin</a>
+    </div>
+  </nav>
+  <div class="container">
+    {% block content %}{% endblock %}
+  </div>
+  <script src="{% static 'js/main.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
