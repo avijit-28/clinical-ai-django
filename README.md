@@ -11,7 +11,7 @@ Four specialist agents work in sequence — Diagnostic, Risk, Treatment Planning
 | Layer | Technology |
 |-------|-----------|
 | Backend | Django 4.2, Python 3.10+ |
-| AI agents | Anthropic Claude API (claude-sonnet) |
+| AI agents | Anthropic Claude API (claude-sonnet) |  Groq LLaMA 
 | Database | SQLite via Django ORM |
 | Frontend | Django templates, HTML/CSS, vanilla JS |
 | Config | python-dotenv |
@@ -45,9 +45,10 @@ pip install -r requirements.txt
 ```bash
 cp .env.example .env
 ```
-Open `.env` and add your Anthropic API key:
+Open `.env` and add your Anthropic API key or  Groq LLaMA:
 ```
 ANTHROPIC_API_KEY=sk-ant-...
+GROQ_API_KEY = GSK......
 ```
 Get your key at https://console.anthropic.com/
 
@@ -145,14 +146,7 @@ clinical_ai/
 └── manage.py
 ```
 
----
 
-## College submission checklist
-
-- [ ] All 4 agents return valid structured JSON
-- [ ] Dashboard shows patients and alerts
-- [ ] AI analysis runs end-to-end on patient detail page
-- [ ] Results display in 4 tabs (Diagnosis / Risk / Treatment / Pathway)
 - [ ] Alert acknowledgement works
 - [ ] Admin panel accessible at /admin/
 - [ ] README documents setup and architecture
