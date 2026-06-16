@@ -11,7 +11,7 @@ Four specialist agents work in sequence — Diagnostic, Risk, Treatment Planning
 | Layer | Technology |
 |-------|-----------|
 | Backend | Django 4.2, Python 3.10+ |
-| AI agents | Anthropic Claude API (claude-sonnet)/ |  Groq LLaMA 
+| AI agents | Anthropic Claude / Groq LLaMA 
 | Database | SQLite via Django ORM |
 | Frontend | Django templates, HTML/CSS, vanilla JS |
 | Config | python-dotenv |
