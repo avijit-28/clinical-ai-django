@@ -1,7 +1,7 @@
 # Agentic AI Clinical Decision Support System
-### Django · Claude API · SQLite
+### Django · Claude API/GROQ API · SQLite
 
-A multi-agent AI system for clinical decision support built with Django and Anthropic's Claude.
+A multi-agent AI system for clinical decision support built with Django and Anthropic's Claude/GROQ.
 Four specialist agents work in sequence — Diagnostic, Risk, Treatment Planning, and Care Pathway — each powered by Claude and coordinated by an Orchestrator.
 
 ---
@@ -11,7 +11,7 @@ Four specialist agents work in sequence — Diagnostic, Risk, Treatment Planning
 | Layer | Technology |
 |-------|-----------|
 | Backend | Django 4.2, Python 3.10+ |
-| AI agents | Anthropic Claude API (claude-sonnet) |  Groq LLaMA 
+| AI agents | Anthropic Claude API (claude-sonnet)/ |  Groq LLaMA 
 | Database | SQLite via Django ORM |
 | Frontend | Django templates, HTML/CSS, vanilla JS |
 | Config | python-dotenv |
